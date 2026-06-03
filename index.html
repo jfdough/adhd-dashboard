@@ -54,6 +54,26 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 #timerRing{transform:rotate(-90deg);transform-origin:center;}
 .ring-bg{fill:none;stroke:var(--surface2);stroke-width:12;}
 .ring-progress{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1s linear,stroke 0.5s;}
+/* DOPAMINE RESET MODAL */
+.reset-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0;}
+.reset-modal-inner{background:var(--surface);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;animation:slideUp 0.3s ease;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.reset-step{background:var(--surface2);border-radius:10px;padding:13px 15px;margin-bottom:8px;border-left:3px solid var(--accent2);font-size:0.83rem;line-height:1.6;}
+.reset-step strong{color:var(--accent);display:block;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;}
+.reset-step.active-step{border-left-color:var(--accent);background:rgba(110,231,183,0.07);}
+.reset-step.done-step{opacity:0.5;border-left-color:var(--border);}
+/* MISSED DAY MODAL */
+.missed-modal{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;}
+.missed-modal-inner{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;width:100%;max-width:420px;}
+/* TIMER URGENCY */
+.timer-urgent .timer-time{color:var(--accent3)!important;animation:pulse 0.8s infinite;}
+.timer-warning .timer-time{color:var(--warn)!important;}
+/* MID-DAY CHECK */
+.midday-bar{background:linear-gradient(135deg,rgba(129,140,248,0.08),rgba(110,231,183,0.05));border:1px solid #2a2d3e;border-radius:11px;padding:11px 14px;margin-bottom:11px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.midday-options{display:flex;gap:6px;flex-wrap:wrap;}
+.midday-btn{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:0.73rem;cursor:pointer;color:var(--text);transition:all 0.2s;}
+.midday-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.midday-btn.selected{border-color:var(--accent);background:rgba(110,231,183,0.1);color:var(--accent);}
 .timer-display{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
 .timer-time{font-family:'Syne',sans-serif;font-size:2.5rem;font-weight:800;line-height:1;}
 .timer-phase{font-size:0.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;}
@@ -235,6 +255,56 @@ textarea.input-field{resize:vertical;min-height:60px;}
   </div>
 </div>
 
+<!-- DOPAMINE RESET MODAL -->
+<div class="reset-modal" id="dopamineModal" style="display:none;" onclick="if(event.target===this)closeDopamineReset()">
+  <div class="reset-modal-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;">⚡ 10-Min Dopamine Reset</div>
+      <button onclick="closeDopamineReset()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;">✕</button>
+    </div>
+    <p style="font-size:0.79rem;color:var(--muted);margin-bottom:14px;">Your brain is overstimulated. Work through these one at a time. Takes 10 minutes. You'll feel different after.</p>
+    <div id="resetSteps">
+      <div class="reset-step active-step" id="rs0"><strong>Step 1 · Right now</strong>Put your phone face down. Close all tabs except what you're working on. Physical environment first.</div>
+      <div class="reset-step" id="rs1"><strong>Step 2 · 60 seconds</strong>Name what you're actually feeling right now. Bored? Anxious? Avoidant? Scattered? Say it out loud or type it below.</div>
+      <div class="reset-step" id="rs2"><strong>Step 3 · 2 minutes</strong>Drink a full glass of water. Stand up. Roll your shoulders back. These aren't clichés — they physically shift your nervous system state.</div>
+      <div class="reset-step" id="rs3"><strong>Step 4 · 2 minutes</strong>Write down the single next action on your most important task. Not the whole project — just the next physical step. One sentence.</div>
+      <div class="reset-step" id="rs4"><strong>Step 5 · Start the timer</strong>Open the Focus tab. Set 25 minutes. Start it before you feel ready. The feeling follows the action, not the other way around.</div>
+    </div>
+    <div style="margin-top:12px;">
+      <textarea class="input-field" id="resetNote" placeholder="What are you feeling right now? (optional — just for you)" style="width:100%;min-height:60px;"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap;">
+      <button class="btn-primary" style="flex:1;" onclick="nextResetStep()">Next step →</button>
+      <button class="btn-secondary btn-sm" onclick="closeDopamineReset()">Done</button>
+    </div>
+    <div id="resetProgress" style="display:flex;gap:5px;justify-content:center;margin-top:11px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);" id="rp0"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--border);" id="rp1"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--border);" id="rp2"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--border);" id="rp3"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--border);" id="rp4"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MISSED DAY MODAL -->
+<div class="missed-modal" id="missedModal" style="display:none;">
+  <div class="missed-modal-inner">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;margin-bottom:8px;">👋 Welcome back</div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;">You missed some days. No judgment — what got in the way?</p>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;" id="missedOptions">
+      <button class="midday-btn" onclick="selectMissed(this,'Too busy / overwhelmed')">Too busy</button>
+      <button class="midday-btn" onclick="selectMissed(this,'Forgot')">Forgot</button>
+      <button class="midday-btn" onclick="selectMissed(this,'Low energy / burnout')">Low energy</button>
+      <button class="midday-btn" onclick="selectMissed(this,'Life got in the way')">Life stuff</button>
+      <button class="midday-btn" onclick="selectMissed(this,'Lost motivation')">Lost motivation</button>
+      <button class="midday-btn" onclick="selectMissed(this,'Needed a break')">Needed a break</button>
+    </div>
+    <input class="input-field" id="missedCustom" placeholder="Or type your own..." style="width:100%;margin-bottom:11px;">
+    <button class="btn-primary" style="width:100%;" onclick="saveMissedDay()">Got it — I'm back ✓</button>
+  </div>
+</div>
+
 <!-- TODAY -->
 <nav>
   <div class="logo">Focus<span>Hub</span></div>
@@ -307,8 +377,19 @@ textarea.input-field{resize:vertical;min-height:60px;}
     <div class="lesson-desc" id="toolsPreview">No distractions logged today.</div>
   </div>
 
-  <div style="text-align:center;margin-top:4px;">
+  <div style="text-align:center;margin-top:4px;display:flex;gap:7px;justify-content:center;flex-wrap:wrap;">
     <button class="btn-secondary btn-sm" onclick="openExport()">📊 Export Progress Report</button>
+    <button class="btn-secondary btn-sm" style="border-color:var(--accent2);color:var(--accent2);" onclick="openDopamineReset()">⚡ Dopamine Reset</button>
+  </div>
+
+  <div class="midday-bar" id="middayBar" style="margin-top:11px;">
+    <div style="font-size:0.79rem;font-weight:500;">Mid-day check: how's your head?</div>
+    <div class="midday-options">
+      <button class="midday-btn" onclick="logMidday(this,'🎯 Locked in')">🎯 Locked in</button>
+      <button class="midday-btn" onclick="logMidday(this,'😐 Scattered')">😐 Scattered</button>
+      <button class="midday-btn" onclick="logMidday(this,'📱 Distracted')">📱 Distracted</button>
+      <button class="midday-btn" onclick="logMidday(this,'😴 Low energy')">😴 Low</button>
+    </div>
   </div>
 </div>
 
@@ -650,6 +731,87 @@ function init(){
     btn.textContent='✓ Logged today';btn.disabled=true;
     document.getElementById('resetTodayStatus').textContent='Already logged for today.';
   }
+  // Check for missed days
+  checkMissedDays();
+}
+
+function checkMissedDays(){
+  const lastActive=localStorage.getItem('fh_last_active');
+  const todayStr=TODAY;
+  if(!lastActive){localStorage.setItem('fh_last_active',todayStr);return;}
+  const last=new Date(lastActive);
+  const today=new Date(todayStr);
+  const diff=Math.floor((today-last)/(1000*60*60*24));
+  if(diff>=2){
+    // Missed at least one day
+    setTimeout(()=>document.getElementById('missedModal').style.display='flex',800);
+  }
+  localStorage.setItem('fh_last_active',todayStr);
+}
+
+// MISSED DAY
+let missedSelection='';
+function selectMissed(btn,val){
+  document.querySelectorAll('#missedOptions .midday-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');missedSelection=val;
+}
+function saveMissedDay(){
+  const reason=document.getElementById('missedCustom').value.trim()||missedSelection||'Not specified';
+  const missed=load('fh_missed_days',[]);
+  missed.unshift({date:TODAY,reason});
+  save('fh_missed_days',missed);
+  document.getElementById('missedModal').style.display='none';
+}
+
+// DOPAMINE RESET
+let currentResetStep=0;
+function openDopamineReset(){
+  currentResetStep=0;document.getElementById('dopamineModal').style.display='flex';
+  updateResetSteps();
+}
+function closeDopamineReset(){document.getElementById('dopamineModal').style.display='none';currentResetStep=0;}
+function nextResetStep(){
+  if(currentResetStep<4){
+    document.getElementById('rs'+currentResetStep).classList.remove('active-step');
+    document.getElementById('rs'+currentResetStep).classList.add('done-step');
+    currentResetStep++;
+    updateResetSteps();
+  } else {
+    // Save the note if there is one
+    const note=document.getElementById('resetNote').value.trim();
+    if(note){
+      const resets=load('fh_dopamine_resets',[]);
+      resets.unshift({date:TODAY,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),note});
+      save('fh_dopamine_resets',resets);
+    }
+    closeDopamineReset();
+    showPage('timer');
+  }
+}
+function updateResetSteps(){
+  for(let i=0;i<5;i++){
+    const dot=document.getElementById('rp'+i);
+    if(dot)dot.style.background=i<currentResetStep?'var(--accent)':i===currentResetStep?'var(--accent2)':'var(--border)';
+  }
+  const activeEl=document.getElementById('rs'+currentResetStep);
+  if(activeEl){activeEl.classList.add('active-step');activeEl.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  const btn=document.querySelector('#dopamineModal .btn-primary');
+  if(btn)btn.textContent=currentResetStep===4?'Start Focus Session →':'Next step →';
+}
+
+// MID-DAY CHECK
+function logMidday(btn,state){
+  document.querySelectorAll('.midday-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const midday=load('fh_midday',[]);
+  midday.unshift({date:TODAY,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),state});
+  save('fh_midday',midday);
+  // If scattered or distracted, suggest dopamine reset
+  if(state.includes('Scattered')||state.includes('Distracted')){
+    setTimeout(()=>{
+      if(confirm('Sounds like your brain needs a reset. Open the 10-min Dopamine Reset?')){openDopamineReset();}
+    },300);
+  }
 }
 
 function showPage(n){
@@ -701,7 +863,13 @@ function renderTimer(){
   const m=Math.floor(secondsLeft/60).toString().padStart(2,'0'),s=(secondsLeft%60).toString().padStart(2,'0');
   document.getElementById('timerDisplay').textContent=`${m}:${s}`;
   document.getElementById('timerPhase').textContent=isBreak?'BREAK':'FOCUS';
-  updateRing(secondsLeft/((isBreak?breakMin:focusMin)*60));
+  const total=(isBreak?breakMin:focusMin)*60;
+  const pct=secondsLeft/total;
+  const wrap=document.getElementById('timerRing').parentElement;
+  wrap.classList.remove('timer-urgent','timer-warning');
+  if(!isBreak&&pct<0.15)wrap.classList.add('timer-urgent');
+  else if(!isBreak&&pct<0.35)wrap.classList.add('timer-warning');
+  updateRing(pct);
 }
 function toggleTimer(){
   if(timerRunning){clearInterval(timerInterval);timerRunning=false;document.getElementById('timerToggle').textContent='▶ Resume';}
