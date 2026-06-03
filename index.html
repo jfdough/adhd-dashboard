@@ -582,7 +582,18 @@ function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
 // Daily reset check
 let lastDate = localStorage.getItem('fh_last_date');
 if(lastDate !== TODAY){
-  // New day — reset daily fields but preserve cumulative data
+  // Archive mood from yesterday BEFORE clearing
+  let moodHist = load('fh_mood_history',{});
+  let prevMood = load('fh_mood_today_entries',[]);
+  if(prevMood.length && lastDate) moodHist[lastDate]=prevMood;
+  save('fh_mood_history',moodHist);
+  // Archive distractions from yesterday BEFORE clearing
+  let distHist = load('fh_dist_history',{});
+  let todayDist = load('fh_distractions',[]);
+  if(todayDist.length && lastDate) distHist[lastDate]=todayDist;
+  save('fh_dist_history',distHist);
+  save('fh_distractions',[]);
+  // Now safe to reset daily fields
   let h = load('fh_habits',[]);
   h.forEach(habit=>{ habit.doneToday=false; });
   save('fh_habits',h);
@@ -590,17 +601,6 @@ if(lastDate !== TODAY){
   save('fh_focus_today',0);
   save('fh_priority','');
   save('fh_last_date',TODAY);
-  // Archive yesterday's mood
-  let moodHist = load('fh_mood_history',{});
-  let prevMood = load('fh_mood_today_entries',[]);
-  if(prevMood.length && lastDate) moodHist[lastDate]=prevMood;
-  save('fh_mood_history',moodHist);
-  // Archive distractions by date
-  let distHist = load('fh_dist_history',{});
-  let todayDist = load('fh_distractions',[]);
-  if(todayDist.length && lastDate) distHist[lastDate]=todayDist;
-  save('fh_dist_history',distHist);
-  save('fh_distractions',[]);
 }
 
 let habits = load('fh_habits',[]);
@@ -960,9 +960,14 @@ async function generateLesson(){
   const out=document.getElementById('aiLessonOutput');out.style.display='block';
   out.innerHTML='<div style="color:var(--muted);font-size:0.8rem;padding:7px 0;"><span class="spinner"></span>Writing your lesson...</div>';
   try{
-    try{     const res=await fetch('https://focushub-api.cornelion08.workers.dev/generate-lesson',{       method:'POST',       headers:{'Content-Type':'application/json'},       body:JSON.stringify({topic})     });     const data=await res.json();     const html=data.html||'';     if(!html){throw new Error('No content returned');}     out.innerHTML=`<div class="ai-lesson-content">${html}</div><textarea class="reflect-area" placeholder="Your reflection..." style="margin-top:9px;"></textarea>`;   }catch(e){     out.innerHTML='<div style="color:var(--accent3);font-size:0.8rem;">Could not generate lesson — check your connection and try again.</div>';   }, science-backed lesson on this ADHD topic: "${topic}". Format as HTML using only: <h3> for title, <h4> for sections, <p> for paragraphs, <ul><li> for bullets, <strong> for emphasis. Structure: title, 2-3 content sections, a short "Try this" section, end with "Reflect:" and one question. Under 400 words. No preamble. No markdown. Output only HTML.`}]})});
+    const res=await fetch('https://focushub-api.cornelion08.workers.dev/generate-lesson',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic})
+    });
     const data=await res.json();
-    const html=data.content.map(i=>i.text||'').join('');
+    const html=data.html||'';
+    if(!html){throw new Error('No content returned');}
     out.innerHTML=`<div class="ai-lesson-content">${html}</div><textarea class="reflect-area" placeholder="Your reflection..." style="margin-top:9px;"></textarea>`;
   }catch(e){
     out.innerHTML='<div style="color:var(--accent3);font-size:0.8rem;">Could not generate lesson — check your connection and try again.</div>';
