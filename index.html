@@ -4,9 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Focus Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0c0e14;--surface:#13151e;--surface2:#1a1d28;--border:#252836;--accent:#6ee7b7;--accent2:#818cf8;--accent3:#f472b6;--warn:#fbbf24;--text:#e2e8f0;--muted:#64748b;--radius:16px;}
+body.light-mode{--bg:#f0f2f7;--surface:#ffffff;--surface2:#e8ebf4;--border:#d1d9e6;--accent:#0d9b6e;--accent2:#5b6ee8;--accent3:#d63384;--warn:#c47a00;--text:#1a1d2e;--muted:#6b7280;}
+/* AUTH */
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:100%;max-width:380px;}
+.auth-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:var(--accent);text-align:center;margin-bottom:6px;}
+.auth-logo span{color:var(--text);}
+.auth-sub{color:var(--muted);font-size:0.8rem;text-align:center;margin-bottom:24px;}
+.auth-tab-row{display:flex;gap:4px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:20px;}
+.auth-tab{flex:1;background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:500;padding:8px;border-radius:7px;cursor:pointer;transition:all 0.2s;}
+.auth-tab.active{background:var(--accent);color:#0c0e14;font-weight:600;}
+.auth-field{margin-bottom:12px;}
+.auth-field label{display:block;font-size:0.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.auth-error{background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.3);border-radius:8px;padding:9px 12px;font-size:0.78rem;color:var(--accent3);margin-bottom:12px;display:none;}
+.auth-success{background:rgba(110,231,183,0.1);border:1px solid rgba(110,231,183,0.3);border-radius:8px;padding:9px 12px;font-size:0.78rem;color:var(--accent);margin-bottom:12px;display:none;}
+.sync-indicator{font-size:0.65rem;color:var(--muted);display:flex;align-items:center;gap:4px;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
 nav{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:rgba(12,14,20,0.97);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px;}
@@ -308,13 +325,17 @@ textarea.input-field{resize:vertical;min-height:60px;}
 <!-- TODAY -->
 <nav>
   <div class="logo">Focus<span>Hub</span></div>
-  <div class="tabs">
+  <div style="display:flex;align-items:center;gap:7px;">
+    <div class="sync-indicator" id="syncIndicator" style="display:none;"><div class="sync-dot"></div><span id="syncText">Synced</span></div>
+    <button id="themeToggle" onclick="toggleTheme()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:0.8rem;color:var(--muted);transition:all 0.2s;" title="Toggle light/dark mode">🌙</button>
+    <div class="tabs">
     <button class="tab-btn active" onclick="showPage('today')">Today</button>
     <button class="tab-btn" onclick="showPage('timer')">⏱ Focus</button>
     <button class="tab-btn" onclick="showPage('habits')">✅ Habits</button>
     <button class="tab-btn" onclick="showPage('lessons')">📖 Learn</button>
     <button class="tab-btn" onclick="showPage('tools')">🛠 Tools</button>
     <button class="tab-btn" onclick="showPage('review')">🗓 Review</button>
+  </div>
   </div>
 </nav>
 
@@ -712,6 +733,17 @@ const lessons=[
 ];
 
 // ===== INIT =====
+// THEME
+function toggleTheme(){
+  const isLight=document.body.classList.toggle('light-mode');
+  localStorage.setItem('fh_theme',isLight?'light':'dark');
+  document.getElementById('themeToggle').textContent=isLight?'🌑':'🌙';
+}
+function applyTheme(){
+  const saved=localStorage.getItem('fh_theme');
+  if(saved==='light'){document.body.classList.add('light-mode');document.getElementById('themeToggle').textContent='🌑';}
+}
+
 function init(){
   const now=new Date(),h=now.getHours();
   document.getElementById('greetingText').textContent=h<12?'Good morning.':h<17?'Good afternoon.':'Good evening.';
@@ -886,7 +918,9 @@ function sessionComplete(){
   document.getElementById('timerToggle').textContent='▶ Start';
   document.getElementById('focusLog').style.display='block';
   const task=document.getElementById('sessionTask').value||'Deep work session';
-  document.getElementById('focusLogContent').innerHTML=`<strong>${task}</strong> — ${totalRounds}×${focusMin}min = <span style="color:var(--accent);font-weight:700;">${totalRounds*focusMin}min</span> focused. 🔥`;
+  const earned=totalRounds*focusMin;
+  document.getElementById('focusLogContent').innerHTML=`<strong>${task}</strong> — ${totalRounds}×${focusMin}min = <span style="color:var(--accent);font-weight:700;">${earned}min</span> focused. 🔥`;
+  syncFocusSession(earned,task);
   updateTodayStats();
 }
 function resetTimer(){clearInterval(timerInterval);timerRunning=false;isBreak=false;currentRound=0;secondsLeft=focusMin*60;buildRoundDots();renderTimer();document.getElementById('timerToggle').textContent='▶ Start';document.getElementById('focusLog').style.display='none';}
@@ -901,12 +935,16 @@ function setSound(btn,name){document.querySelectorAll('.sound-btn').forEach(b=>b
 
 // HABITS
 function saveHabits(){save('fh_habits',habits);}
+function saveAndSyncHabit(h){saveHabits();syncHabit(h);}
 function addPreset(name,freq){document.getElementById('habitInput').value=name;document.getElementById('habitFreq').value=freq;addHabit();}
 function addHabit(){
   const name=document.getElementById('habitInput').value.trim(),freq=document.getElementById('habitFreq').value;
   if(!name)return;
   habits.push({id:Date.now(),name,freq,streak:0,totalDays:0,doneToday:false,weekDots:[false,false,false,false,false,false,false],startDate:TODAY});
-  document.getElementById('habitInput').value='';saveHabits();renderHabits();updateTodayStats();
+  document.getElementById('habitInput').value='';
+  saveHabits();
+  syncHabit(habits[habits.length-1]);
+  renderHabits();updateTodayStats();
 }
 function toggleHabit(id){
   const h=habits.find(x=>x.id===id);if(!h)return;
@@ -927,9 +965,9 @@ function toggleHabit(id){
   } else {
     h.streak=Math.max(0,h.streak-1);h.totalDays=Math.max(0,(h.totalDays||0)-1);h.weekDots[new Date().getDay()]=false;
   }
-  saveHabits();renderHabits();updateTodayStats();
+  saveHabits();syncHabit(h);renderHabits();updateTodayStats();
 }
-function deleteHabit(id){if(!confirm('Remove this habit?'))return;habits=habits.filter(h=>h.id!==id);saveHabits();renderHabits();updateTodayStats();}
+function deleteHabit(id){if(!confirm('Remove this habit?'))return;syncDeleteHabit(id);habits=habits.filter(h=>h.id!==id);saveHabits();renderHabits();updateTodayStats();}
 function renderHabits(){
   const list=document.getElementById('habitList');
   if(!habits.length){list.innerHTML='<div style="color:var(--muted);font-size:0.77rem;padding:11px;text-align:center;">No habits yet. Add one above or use a preset.</div>';return;}
@@ -978,7 +1016,7 @@ function addBook(){
   books.push({id:Date.now(),title,author,status,totalPages,currentPage:Math.min(currentPage,totalPages||99999),added:TODAY});
   document.getElementById('bookTitle').value='';document.getElementById('bookAuthor').value='';
   document.getElementById('bookTotalPages').value='';document.getElementById('bookCurrentPage').value='';
-  save('fh_books',books);renderBooks();toggleAddBook();
+  save('fh_books',books);syncBook(books[books.length-1]);renderBooks();toggleAddBook();
 }
 function updateBookPages(id,field,val){
   const b=books.find(x=>x.id===id);if(!b)return;
@@ -986,23 +1024,22 @@ function updateBookPages(id,field,val){
   if(field==='total')b.totalPages=Math.max(0,n);
   if(field==='current')b.currentPage=Math.max(0,Math.min(n,b.totalPages||99999));
   if(b.totalPages>0&&b.currentPage>=b.totalPages){b.status='finished';}
-  save('fh_books',books);renderBooks();
+  save('fh_books',books);syncBook(b);renderBooks();
 }
 function addPagesToActiveBook(pages){
-  // Find the first "reading" book; if multiple, pick most recently updated
   const reading=books.filter(b=>b.status==='reading');
   if(!reading.length)return false;
   const b=reading[reading.length-1];
   b.currentPage=Math.min((b.currentPage||0)+pages,b.totalPages||99999);
   if(b.totalPages>0&&b.currentPage>=b.totalPages)b.status='finished';
-  save('fh_books',books);renderBooks();return b;
+  save('fh_books',books);syncBook(b);renderBooks();return b;
 }
 function changeBookStatus(id,status){
   const b=books.find(x=>x.id===id);if(!b)return;
   if(status!=='finished'&&b.status==='finished'&&incompleteBookCount()>=MAX_INCOMPLETE){alert('You have 5 incomplete books. Finish or remove one first.');return;}
-  b.status=status;save('fh_books',books);renderBooks();
+  b.status=status;save('fh_books',books);syncBook(b);renderBooks();
 }
-function deleteBook(id){if(!confirm('Remove this book?'))return;books=books.filter(b=>b.id!==id);save('fh_books',books);renderBooks();}
+function deleteBook(id){if(!confirm('Remove this book?'))return;syncDeleteBook(id);books=books.filter(b=>b.id!==id);save('fh_books',books);renderBooks();}
 function filterBooks(f,btn){
   bookFilter=f;
   document.querySelectorAll('.book-tab').forEach(t=>t.classList.remove('active'));
@@ -1072,7 +1109,10 @@ function deleteDistEntry(i){distractions.splice(i,1);save('fh_distractions',dist
 function deleteUrgeEntry(i){urgeLog.splice(i,1);save('fh_urge_log',urgeLog);renderUrgeLog();}
 function logMood(emoji,label){
   const t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  moodEntries.push({emoji,label,time:t});save('fh_mood_today_entries',moodEntries);renderMoodLog();
+  const entry={emoji,label,time:t};
+  moodEntries.push(entry);save('fh_mood_today_entries',moodEntries);
+  syncMood(entry);
+  renderMoodLog();
   document.getElementById('moodEmoji').textContent=emoji;
 }
 function renderMoodLog(){
@@ -1164,6 +1204,18 @@ function generateSteps(task){
     return['Set a 10-minute timer — only 10 minutes','Pick one specific area (not the whole space)','Remove everything that doesn\'t belong there','Put like things together','Wipe or reset the surface','Acknowledge the progress'];
   if(t.includes('call')||t.includes('phone')||t.includes('reach out'))
     return['Write the 3 main points you need to cover','Find the number and have it ready','Text first if anxious about calling cold','Make the call — under 5 minutes if possible','Write action items immediately after'];
+  if(t.includes('post')||t.includes('content')||t.includes('social')||t.includes('video')||t.includes('reel'))
+    return['Pick one topic — don\'t brainstorm, just pick the first decent idea','Write 3 bullet points: hook, value, call to action','Record or write in one take — done beats perfect','Edit only what\'s broken, not everything','Post and move on — engagement comes from volume not perfection'];
+  if(t.includes('stress')||t.includes('overwhelm')||t.includes('anxious')||t.includes('anxiety')||t.includes('too much')||t.includes('behind'))
+    return['Stop. Seriously — close everything and just stop for 60 seconds','Write down every single thing on your mind — get it out of your head onto paper or notes','Circle the ONE thing that would make tomorrow easier if done today','Do only that one thing for 25 minutes','Everything else stays on the list — it\'s captured, it won\'t disappear'];
+  if(t.includes('follow up')||t.includes('follow-up')||t.includes('client')||t.includes('lead'))
+    return['Pull up the contact or thread — just find it first','Write one sentence about what you need from them or want to say','Send a short direct message — under 5 lines','Log it somewhere so you know when to follow up again','Move to the next one — momentum beats perfection'];
+  if(t.includes('build')||t.includes('app')||t.includes('code')||t.includes('website')||t.includes('feature'))
+    return['Write in one sentence what "done" looks like for this session','Open only the files you need — close everything else','Build the smallest version that does the thing','Test it once it works','Commit or save before you do anything else'];
+  if(t.includes('plan')||t.includes('prepare')||t.includes('schedule')||t.includes('meeting'))
+    return['Write down the goal of this plan in one sentence','List every action needed — don\'t order yet, just dump','Number them in the order they need to happen','Put a time estimate next to each','Block time on your calendar for the first 3 steps'];
+  if(t.includes('read')||t.includes('research')||t.includes('learn')||t.includes('study'))
+    return['Set a specific question you want answered — not just "learn about X"','Open the source and set a 25-minute timer','Read actively — highlight or note anything that answers your question','At the end write 3 things you learned in your own words','Decide: do you need more or is this enough to move forward?'];
   return['Write down exactly what "done" looks like for this task','Clear your space and close unrelated tabs/apps','Identify the single first physical action','Do only that first action — nothing more yet','Write down the next step','Continue one step at a time, check each off','Acknowledge completion — out loud or in writing'];
 }
 function toggleStep(id){
@@ -1179,7 +1231,7 @@ function logDistraction(preset){
   const t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   distractions.unshift({text,time:t,date:TODAY});
   if(!preset)input.value='';
-  save('fh_distractions',distractions);renderDistractions();updateToolsPreview();
+  save('fh_distractions',distractions);syncDistraction({text,time:t});renderDistractions();updateToolsPreview();
 }
 function getDistSummary(){
   const all=[...distractions,...Object.values(load('fh_dist_history',{})).flat()];
@@ -1224,14 +1276,15 @@ function markResetDay(held){
     const btn=document.getElementById('heldBtn');btn.textContent='✓ Held today';btn.disabled=false;
     document.getElementById('resetTodayStatus').textContent='';
   }
-  save('fh_reset_streak',resetStreak);renderResetStreak();
+  save('fh_reset_streak',resetStreak);syncResetStreak();renderResetStreak();
 }
 function logUrge(){
   const outcome=document.getElementById('urgeOutcome').value;
   const trigger=document.getElementById('urgeTrigger').value.trim()||'Not specified';
   const t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  urgeLog.unshift({outcome,trigger,time:t,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})});
-  document.getElementById('urgeTrigger').value='';save('fh_urge_log',urgeLog);renderUrgeLog();
+  const entry={outcome,trigger,time:t,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})};
+  urgeLog.unshift(entry);
+  document.getElementById('urgeTrigger').value='';save('fh_urge_log',urgeLog);syncUrge(entry);renderUrgeLog();
 }
 function renderUrgeLog(){
   const el=document.getElementById('urgeLog');
@@ -1250,87 +1303,14 @@ function saveReview(){
   const q1=document.getElementById('rq1').value.trim(),q2=document.getElementById('rq2').value.trim(),q3=document.getElementById('rq3').value.trim(),q4=document.getElementById('rq4').value.trim();
   if(!q1&&!q2&&!q3&&!q4){alert('Fill in at least one answer.');return;}
   const weekOf=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-  weeklyReviews.unshift({date:weekOf,dateRaw:TODAY,q1,q2,q3,q4});
+  const review={date:weekOf,dateRaw:TODAY,q1,q2,q3,q4};
+  weeklyReviews.unshift(review);
   save('fh_reviews',weeklyReviews);
+  syncReview(review);
   document.getElementById('rq1').value='';document.getElementById('rq2').value='';document.getElementById('rq3').value='';document.getElementById('rq4').value='';
   renderReviewHistory();
   alert('Review saved ✓ You\'ll thank yourself for this later.');
 }
 function deleteReview(i){if(!confirm('Delete this weekly review?'))return;weeklyReviews.splice(i,1);save('fh_reviews',weeklyReviews);renderReviewHistory();}
 function renderReviewHistory(){
-  const el=document.getElementById('reviewHistory');
-  if(!weeklyReviews.length){el.innerHTML='';return;}
-  el.innerHTML=`<div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Past Reviews</div>`+
-  weeklyReviews.slice(0,8).map((r,i)=>`<div class="review-history-item">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div class="review-date">Week of ${r.date}</div>
-      <button class="delete-x" onclick="deleteReview(${i})" title="Delete review">✕</button>
-    </div>
-    ${r.q1?`<div class="review-answer"><strong>Went well</strong>${r.q1}</div>`:''}
-    ${r.q2?`<div class="review-answer"><strong>Got in my way</strong>${r.q2}</div>`:''}
-    ${r.q3?`<div class="review-answer"><strong>Do differently</strong>${r.q3}</div>`:''}
-    ${r.q4?`<div class="review-answer"><strong>Week rating</strong>${r.q4}</div>`:''}
-  </div>`).join('');
-}
-
-// EXPORT
-function openExport(){
-  document.getElementById('exportModal').style.display='flex';
-  const now=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const held=urgeLog.filter(u=>u.outcome==='held').length,slipped=urgeLog.filter(u=>u.outcome==='slipped').length;
-  const distSum=getDistSummary();
-  document.getElementById('exportContent').innerHTML=`
-    <div style="font-size:0.71rem;color:var(--muted);margin-bottom:12px;">Generated: ${now}</div>
-    <div class="export-section"><h4>📊 Overview</h4>
-      <div class="export-row"><span>Focus minutes today</span><span class="export-val">${focusMinTotal}</span></div>
-      <div class="export-row"><span>Habits done today</span><span class="export-val">${habits.filter(h=>h.doneToday).length}/${habits.length}</span></div>
-      <div class="export-row"><span>Lessons read</span><span class="export-val">${lessonsDone.length}/6</span></div>
-      <div class="export-row"><span>Reset streak</span><span class="export-val">${resetStreak} days</span></div>
-      <div class="export-row"><span>Books tracked</span><span class="export-val">${books.filter(b=>b.status==='reading').length} reading · ${books.filter(b=>b.status==='finished').length} finished</span></div>
-      <div class="export-row"><span>Weekly reviews saved</span><span class="export-val">${weeklyReviews.length}</span></div>
-    </div>
-    <div class="export-section"><h4>✅ Habits</h4>
-      ${habits.length?habits.map(h=>{const p=Math.min(100,Math.round(((h.totalDays||0)/HABIT_AUTO)*100));return`<div class="export-row"><span>${h.name} <span style="color:var(--muted);font-size:0.68rem;">(${h.freq})</span></span><span class="export-val">${h.totalDays||0}d · ${p}% · ${(h.totalDays||0)>=HABIT_AUTO?'🎉 Auto':'🔥'+h.streak}</span></div>`;}).join(''):'<div style="color:var(--muted);font-size:0.78rem;padding:5px 0;">No habits tracked yet.</div>'}
-    </div>
-    <div class="export-section"><h4>📚 Books</h4>
-      ${books.length?books.map(b=>{const pct=b.totalPages>0?Math.round((b.currentPage/b.totalPages)*100):null;return`<div class="export-row"><span>${b.title}${b.author?' by '+b.author:''}</span><span class="export-val">${b.status}${pct!==null?' · p.'+b.currentPage+'/'+b.totalPages+' ('+pct+'%)':''}</span></div>`;}).join(''):'<div style="color:var(--muted);font-size:0.78rem;padding:5px 0;">No books tracked yet.</div>'}
-    </div>
-    <div class="export-section"><h4>📡 Distraction Patterns</h4>
-      ${distSum.length?distSum.map(([k,v])=>`<div class="export-row"><span>${k}</span><span class="export-val">${v}×</span></div>`).join('')+'<div class="export-row" style="margin-top:4px;"><span>Today</span><span class="export-val">${distractions.length} logged</span></div>':'<div style="color:var(--muted);font-size:0.78rem;padding:5px 0;">No distractions logged yet.</div>'}
-    </div>
-    <div class="export-section"><h4>🧭 Reset Journey</h4>
-      <div class="export-row"><span>Current streak</span><span class="export-val">${resetStreak} days</span></div>
-      <div class="export-row"><span>Times held</span><span class="export-val" style="color:var(--accent);">${held}</span></div>
-      <div class="export-row"><span>Times reset</span><span class="export-val" style="color:var(--accent3);">${slipped}</span></div>
-      ${held+slipped>0?`<div class="export-row"><span>Hold rate</span><span class="export-val">${Math.round(held/(held+slipped)*100)}%</span></div>`:''}
-    </div>`;
-}
-
-function downloadExport(format){
-  const d=new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
-  const held=urgeLog.filter(u=>u.outcome==='held').length,slipped=urgeLog.filter(u=>u.outcome==='slipped').length;
-  if(format==='txt'){
-    let t=`FOCUS HUB — PROGRESS REPORT\nGenerated: ${new Date().toLocaleString()}\n${'='.repeat(44)}\n\n`;
-    t+=`OVERVIEW\n${'-'.repeat(22)}\nFocus minutes today: ${focusMinTotal}\nHabits done: ${habits.filter(h=>h.doneToday).length}/${habits.length}\nLessons read: ${lessonsDone.length}/6\nReset streak: ${resetStreak} days\nWeekly reviews: ${weeklyReviews.length}\n\n`;
-    t+=`HABITS\n${'-'.repeat(22)}\n`;habits.forEach(h=>{const p=Math.min(100,Math.round(((h.totalDays||0)/HABIT_AUTO)*100));t+=`• ${h.name} (${h.freq})\n  Days: ${h.totalDays||0} | Progress: ${p}% | Streak: ${h.streak} | ${(h.totalDays||0)>=HABIT_AUTO?'AUTOMATIC ✓':'In progress'}\n\n`;});
-    t+=`BOOKS\n${'-'.repeat(22)}\n`;books.forEach(b=>{const pct=b.totalPages>0?Math.round((b.currentPage/b.totalPages)*100):null;t+=`• ${b.title}${b.author?' by '+b.author:''} — ${b.status}${pct!==null?' (p.'+b.currentPage+'/'+b.totalPages+', '+pct+'%)':''}\n`;});
-    t+=`\nDISTRACTIONS (all time top patterns)\n${'-'.repeat(22)}\n`;getDistSummary().forEach(([k,v])=>{t+=`• ${k}: ${v}×\n`;});
-    t+=`\nRESET JOURNEY\n${'-'.repeat(22)}\nStreak: ${resetStreak} days | Held: ${held} | Slipped: ${slipped}`;
-    if(held+slipped>0)t+=` | Hold rate: ${Math.round(held/(held+slipped)*100)}%`;
-    t+=`\n\nWEEKLY REVIEWS\n${'-'.repeat(22)}\n`;weeklyReviews.slice(0,4).forEach(r=>{t+=`Week of ${r.date}\n${r.q1?'Went well: '+r.q1+'\n':''}${r.q3?'Do differently: '+r.q3+'\n':''}${r.q4?'Rating: '+r.q4+'\n':''}\n`;});
-    const blob=new Blob([t],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`focushub-${d.replace(/ /g,'-')}.txt`;a.click();
-  } else {
-    let csv='Category,Item,Value\n';
-    csv+=`Overview,Focus minutes,${focusMinTotal}\nOverview,Habits today,${habits.filter(h=>h.doneToday).length}/${habits.length}\nOverview,Reset streak,${resetStreak}\n`;
-    habits.forEach(h=>csv+=`Habits,"${h.name} (${h.freq})",${h.totalDays||0} days / ${Math.min(100,Math.round(((h.totalDays||0)/HABIT_AUTO)*100))}%\n`);
-    books.forEach(b=>{const pct=b.totalPages>0?Math.round((b.currentPage/b.totalPages)*100)+'%':'';csv+=`Books,"${b.title}","${b.status}","p.${b.currentPage||0}/${b.totalPages||'?'} ${pct}"\n`;});
-    getDistSummary().forEach(([k,v])=>csv+=`Distractions,"${k}",${v}\n`);
-    csv+=`Reset,Held,${held}\nReset,Slipped,${slipped}\n`;
-    const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`focushub-${d.replace(/ /g,'-')}.csv`;a.click();
-  }
-}
-
-init();renderTimer();
-</script>
-</body>
-</html>
+  con
